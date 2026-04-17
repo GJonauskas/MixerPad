@@ -1,0 +1,30 @@
+{
+  "rows": 8,
+  "cols": 8,
+  "pads": [
+    {
+      "row": 0,
+      "col": 0,
+      "name": "Kick Demo",
+      "loop": false,
+      "file": null,
+      "color": "#38bdf8"
+    },
+    {
+      "row": 0,
+      "col": 1,
+      "name": "Snare Demo",
+      "loop": false,
+      "file": null,
+      "color": "#4f46e5"
+    },
+    {
+      "row": 1,
+      "col": 0,
+      "name": "Ambient Demo",
+      "loop": true,
+      "file": null,
+      "color": "#d946ef"
+    }
+  ]
+}

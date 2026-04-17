@@ -1,0 +1,127 @@
+:root {
+  color-scheme: dark;
+  --bg: #0f1220;
+  --panel: #1a1f35;
+  --line: #2c3355;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: radial-gradient(circle at top, #21284d, var(--bg));
+  color: #eef1ff;
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1, h2, p {
+  margin: 0;
+}
+
+header p {
+  opacity: .8;
+  margin-top: 6px;
+}
+
+.controls,
+.editor {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--panel), black 10%);
+  border: 1px solid var(--line);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.controls button,
+.editor button {
+  border: 1px solid #4f46e5;
+  background: #3730a3;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.editor label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.editor input[type="text"] {
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: #10152b;
+  color: #fff;
+  padding: 6px 8px;
+}
+
+.grid {
+  margin-top: 16px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(var(--cols), minmax(80px, 1fr));
+}
+
+.pad {
+  min-height: 92px;
+  border: none;
+  border-radius: 18px;
+  padding: 8px;
+  color: #fff;
+  background: radial-gradient(circle at center, color-mix(in oklab, var(--pad-color), white 18%), var(--pad-color));
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .25);
+  cursor: pointer;
+}
+
+.pad strong {
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
+}
+
+.pad.empty {
+  opacity: .55;
+  filter: grayscale(.2);
+}
+
+.pad.selected {
+  outline: 3px solid #f59e0b;
+}
+
+.time {
+  font-size: .8rem;
+}
+
+.meter {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.25);
+  overflow: hidden;
+}
+
+.meter-bar {
+  width: 0;
+  height: 100%;
+  transition: width .08s linear;
+  background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
+}
