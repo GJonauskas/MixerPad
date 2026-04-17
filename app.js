@@ -1,5 +1,5 @@
 const state = {
-  rows: 8,
+  rows: 6,
   cols: 8,
   pads: [],
   selectedKey: null,
@@ -7,9 +7,12 @@ const state = {
   draggingKey: null,
 };
 
+const DEFAULT_GRAY = '#6b7280';
+
 const grid = document.getElementById('grid');
 const statusEl = document.getElementById('status');
 const filePicker = document.getElementById('filePicker');
+const importPicker = document.getElementById('importPicker');
 const nameInput = document.getElementById('padName');
 const loopInput = document.getElementById('padLoop');
 const colorInput = document.getElementById('padColor');
@@ -17,6 +20,30 @@ const colorInput = document.getElementById('padColor');
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
 const keyOf = (row, col) => `${row}:${col}`;
+
+function randomVibrantColor() {
+  const hue = Math.random();
+  const sat = 0.8;
+  const val = 0.92;
+  const i = Math.floor(hue * 6);
+  const f = hue * 6 - i;
+  const p = val * (1 - sat);
+  const q = val * (1 - f * sat);
+  const t = val * (1 - (1 - f) * sat);
+
+  let r; let g; let b;
+  switch (i % 6) {
+    case 0: [r, g, b] = [val, t, p]; break;
+    case 1: [r, g, b] = [q, val, p]; break;
+    case 2: [r, g, b] = [p, val, t]; break;
+    case 3: [r, g, b] = [p, q, val]; break;
+    case 4: [r, g, b] = [t, p, val]; break;
+    default: [r, g, b] = [val, p, q];
+  }
+
+  const toHex = (n) => Math.round(n * 255).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
 
 function getPad(row, col) {
   return state.pads.find((p) => p.row === row && p.col === col) ?? null;
@@ -57,7 +84,9 @@ function render() {
       button.dataset.row = row;
       button.dataset.col = col;
       button.draggable = true;
-      button.style.setProperty('--pad-color', pad?.color ?? '#6b7280');
+
+      const padColor = pad?.color ?? DEFAULT_GRAY;
+      button.style.background = `radial-gradient(circle at center, color-mix(in oklab, ${padColor}, white 18%), ${padColor})`;
 
       if (pad) {
         const time = `<span class="time" id="time-${keyOf(row, col)}">--:--</span>`;
@@ -95,7 +124,7 @@ function ensurePad(row, col) {
     name: `Pad ${row + 1}-${col + 1}`,
     loop: false,
     file: null,
-    color: '#6b7280',
+    color: DEFAULT_GRAY,
   };
   setPad(fresh);
   return fresh;
@@ -105,13 +134,28 @@ function syncEditor(pad) {
   if (!pad) {
     nameInput.value = '';
     loopInput.checked = false;
-    colorInput.value = '#6b7280';
+    colorInput.value = DEFAULT_GRAY;
     return;
   }
 
   nameInput.value = pad.name;
   loopInput.checked = !!pad.loop;
-  colorInput.value = pad.color || '#6b7280';
+  colorInput.value = normalizeToHex(pad.color) || DEFAULT_GRAY;
+}
+
+function normalizeToHex(color) {
+  if (!color) return null;
+  if (color.startsWith('#')) return color;
+
+  const temp = document.createElement('div');
+  temp.style.color = color;
+  document.body.appendChild(temp);
+  const rgb = getComputedStyle(temp).color;
+  document.body.removeChild(temp);
+
+  const match = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (!match) return null;
+  return `#${Number(match[1]).toString(16).padStart(2, '0')}${Number(match[2]).toString(16).padStart(2, '0')}${Number(match[3]).toString(16).padStart(2, '0')}`;
 }
 
 async function onPadClick(row, col) {
@@ -127,36 +171,63 @@ async function onPadClick(row, col) {
     return;
   }
 
-  await playPad(pad);
+  await togglePadPlayback(pad);
 }
 
-async function playPad(pad) {
+async function togglePadPlayback(pad) {
   await audioContext.resume();
   const key = keyOf(pad.row, pad.col);
   let player = state.players.get(key);
 
   if (!player) {
-    const audio = new Audio(pad.file);
-    audio.loop = !!pad.loop;
-    const source = audioContext.createMediaElementSource(audio);
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 64;
-    source.connect(analyser);
-    analyser.connect(audioContext.destination);
+    player = createPlayer(pad, key);
+  }
 
-    player = { audio, analyser, raf: null };
-    state.players.set(key, player);
-
-    audio.addEventListener('ended', () => {
-      stopMeter(key, player);
-      setRemainingTime(key, 0);
-    });
+  if (!player.audio.paused) {
+    stopPlayer(key, player, true);
+    return;
   }
 
   player.audio.loop = !!pad.loop;
   player.audio.currentTime = 0;
   await player.audio.play();
   animateMeter(key, player);
+}
+
+function createPlayer(pad, key) {
+  const audio = new Audio(pad.file);
+  audio.loop = !!pad.loop;
+  const source = audioContext.createMediaElementSource(audio);
+  const analyser = audioContext.createAnalyser();
+  analyser.fftSize = 64;
+  source.connect(analyser);
+  analyser.connect(audioContext.destination);
+
+  const player = { audio, analyser, raf: null };
+  state.players.set(key, player);
+
+  audio.addEventListener('ended', () => {
+    stopMeter(key, player);
+    setRemainingTime(key, 0);
+  });
+
+  return player;
+}
+
+function stopPlayer(key, player, resetTime = false) {
+  player.audio.pause();
+  if (resetTime) {
+    player.audio.currentTime = 0;
+  }
+  stopMeter(key, player);
+  setRemainingTime(key, 0);
+}
+
+function stopAll() {
+  for (const [key, player] of state.players.entries()) {
+    stopPlayer(key, player, true);
+  }
+  status('⏹️ Visi garsai sustabdyti');
 }
 
 function animateMeter(key, player) {
@@ -220,6 +291,10 @@ async function uploadAudio(file, row, col) {
 
   const pad = ensurePad(row, col);
   pad.file = payload.file;
+  pad.color = randomVibrantColor();
+  if (!pad.name || pad.name.startsWith('Pad ')) {
+    pad.name = file.name.replace(/\.[^.]+$/, '');
+  }
   setPad(pad);
   status(`✅ Priskirta: ${file.name}`);
   render();
@@ -272,7 +347,36 @@ async function saveState() {
   if (!response.ok) {
     throw new Error(payload.error || 'Nepavyko išsaugoti');
   }
-  status('💾 Išsaugota');
+  status('💾 Išsaugota (globaliai JSON faile)');
+}
+
+function exportState() {
+  const data = JSON.stringify({ rows: state.rows, cols: state.cols, pads: state.pads }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `mixpad_export_${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+  status('⬇️ JSON eksportas paruoštas');
+}
+
+async function importState(file) {
+  const text = await file.text();
+  const parsed = JSON.parse(text);
+
+  if (typeof parsed.rows !== 'number' || typeof parsed.cols !== 'number' || !Array.isArray(parsed.pads)) {
+    throw new Error('Netinkamas JSON formatas importui');
+  }
+
+  state.rows = parsed.rows;
+  state.cols = parsed.cols;
+  state.pads = parsed.pads;
+  stopAll();
+  render();
+  await saveState();
+  status('⬆️ Importas atliktas ir išsaugotas');
 }
 
 filePicker.addEventListener('change', async () => {
@@ -288,6 +392,18 @@ filePicker.addEventListener('change', async () => {
     status(`❌ ${error.message}`);
   } finally {
     filePicker.value = '';
+  }
+});
+
+importPicker.addEventListener('change', async () => {
+  const file = importPicker.files?.[0];
+  if (!file) return;
+  try {
+    await importState(file);
+  } catch (error) {
+    status(`❌ ${error.message}`);
+  } finally {
+    importPicker.value = '';
   }
 });
 
@@ -308,6 +424,10 @@ document.getElementById('saveState').addEventListener('click', async () => {
     status(`❌ ${error.message}`);
   }
 });
+
+document.getElementById('stopAll').addEventListener('click', stopAll);
+document.getElementById('exportState').addEventListener('click', exportState);
+document.getElementById('importState').addEventListener('click', () => importPicker.click());
 
 nameInput.addEventListener('input', () => {
   if (!state.selectedKey) return;
@@ -340,6 +460,7 @@ document.getElementById('clearAudio').addEventListener('click', () => {
   const [row, col] = state.selectedKey.split(':').map(Number);
   const pad = ensurePad(row, col);
   pad.file = null;
+  pad.color = DEFAULT_GRAY;
   setPad(pad);
   render();
 });

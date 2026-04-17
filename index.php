@@ -74,13 +74,9 @@ function ensureFolders(): void
 function defaultState(): array
 {
     return [
-        'rows' => 8,
+        'rows' => 6,
         'cols' => 8,
-        'pads' => [
-            ['row' => 0, 'col' => 0, 'name' => 'Kick Demo', 'loop' => false, 'file' => null, 'color' => '#38bdf8'],
-            ['row' => 0, 'col' => 1, 'name' => 'Snare Demo', 'loop' => false, 'file' => null, 'color' => '#4f46e5'],
-            ['row' => 1, 'col' => 0, 'name' => 'Ambient Demo', 'loop' => true, 'file' => null, 'color' => '#d946ef'],
-        ],
+        'pads' => [],
     ];
 }
 
@@ -187,20 +183,23 @@ function handleUpload(array $file): string
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mixinx Pad</title>
+    <title>MixPad</title>
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 <div class="app">
     <header>
-        <h1>🎛️ Mixinx Pad</h1>
-        <p>8x8 startas, MP3/WAV įkėlimas, loop režimas, perstumimas, likęs laikas ir mini EQ.</p>
+        <h1>MixPad</h1>
+        <p>6x8 startas, MP3/WAV įkėlimas, loop režimas, perstumimas, likęs laikas, mini EQ ir JSON import/export.</p>
     </header>
 
     <section class="controls">
         <button id="addRow">+ Eilutė</button>
         <button id="addCol">+ Stulpelis</button>
         <button id="saveState">💾 Išsaugoti</button>
+        <button id="stopAll">⏹️ Stop all</button>
+        <button id="exportState">⬇️ Export JSON</button>
+        <button id="importState">⬆️ Import JSON</button>
         <span id="status"></span>
     </section>
 
@@ -216,6 +215,7 @@ function handleUpload(array $file): string
     <main id="grid" class="grid" aria-label="Mixinx grid"></main>
 </div>
 <input type="file" id="filePicker" accept=".mp3,.wav,audio/mpeg,audio/wav" hidden />
+<input type="file" id="importPicker" accept="application/json,.json" hidden />
 <script src="app.js" defer></script>
 </body>
 </html>
